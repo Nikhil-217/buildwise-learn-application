@@ -21,21 +21,72 @@ const ProjectDetails = () => {
   const [location, setLocation] = useState("");
   const [area, setArea] = useState("");
   const [floors, setFloors] = useState([1]);
-  const [rooms, setRooms] = useState("");
-  const [bathrooms, setBathrooms] = useState("");
-  const [kitchens, setKitchens] = useState("");
+  const [floorData, setFloorData] = useState([
+    { bedrooms: "", bathrooms: "", kitchens: "" }
+  ]);
   const [quality, setQuality] = useState("standard");
+
+  // Update floor data when number of floors changes
+  const handleFloorsChange = (value: number[]) => {
+    setFloors(value);
+    const newFloorCount = value[0];
+    const currentFloorCount = floorData.length;
+
+    if (newFloorCount > currentFloorCount) {
+      // Add new floors
+      const newFloors = Array(newFloorCount - currentFloorCount).fill({
+        bedrooms: "",
+        bathrooms: "",
+        kitchens: ""
+      });
+      setFloorData([...floorData, ...newFloors]);
+    } else if (newFloorCount < currentFloorCount) {
+      // Remove excess floors
+      setFloorData(floorData.slice(0, newFloorCount));
+    }
+  };
+
+  const updateFloorData = (index: number, field: string, value: string) => {
+    const updated = [...floorData];
+    updated[index] = { ...updated[index], [field]: value };
+    setFloorData(updated);
+  };
+
+  const getFloorLabel = (index: number) => {
+    const labels = ["Ground Floor", "First Floor", "Second Floor", "Third Floor"];
+    return labels[index] || `Floor ${index + 1}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Save to localStorage or context
+    
+    // Validate that all floor data is filled
+    const isValid = floorData.every(
+      floor => floor.bedrooms && floor.bathrooms && floor.kitchens
+    );
+    
+    if (!isValid) {
+      return; // Form validation will show required errors
+    }
+
+    // Calculate totals for backward compatibility
+    const totalRooms = floorData.reduce((sum, floor) => sum + parseInt(floor.bedrooms), 0);
+    const totalBathrooms = floorData.reduce((sum, floor) => sum + parseInt(floor.bathrooms), 0);
+    const totalKitchens = floorData.reduce((sum, floor) => sum + parseInt(floor.kitchens), 0);
+
     const projectData = {
       location,
       area: parseFloat(area),
       floors: floors[0],
-      rooms: parseInt(rooms),
-      bathrooms: parseInt(bathrooms),
-      kitchens: parseInt(kitchens),
+      floorData: floorData.map(floor => ({
+        bedrooms: parseInt(floor.bedrooms),
+        bathrooms: parseInt(floor.bathrooms),
+        kitchens: parseInt(floor.kitchens),
+      })),
+      // Totals for backward compatibility
+      rooms: totalRooms,
+      bathrooms: totalBathrooms,
+      kitchens: totalKitchens,
       quality,
     };
     localStorage.setItem("currentProject", JSON.stringify(projectData));
@@ -119,7 +170,7 @@ const ProjectDetails = () => {
             <div className="space-y-4">
               <Slider
                 value={floors}
-                onValueChange={setFloors}
+                onValueChange={handleFloorsChange}
                 min={1}
                 max={4}
                 step={1}
@@ -133,52 +184,69 @@ const ProjectDetails = () => {
             </div>
           </div>
 
-          {/* Rooms Grid */}
-          <div className="grid md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <div className="card-soft space-y-3">
-              <Label htmlFor="rooms" className="text-sm font-medium">
-                Bedrooms
-              </Label>
-              <Input
-                id="rooms"
-                type="number"
-                placeholder="e.g., 3"
-                value={rooms}
-                onChange={(e) => setRooms(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
+          {/* Floor-wise Room Details */}
+          <div className="space-y-4">
+            {floorData.map((floor, index) => (
+              <div 
+                key={index} 
+                className="card-soft space-y-4 animate-fade-in border-l-4 border-primary"
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <h3 className="text-lg font-semibold">{getFloorLabel(index)}</h3>
+                </div>
 
-            <div className="card-soft space-y-3">
-              <Label htmlFor="bathrooms" className="text-sm font-medium">
-                Bathrooms
-              </Label>
-              <Input
-                id="bathrooms"
-                type="number"
-                placeholder="e.g., 2"
-                value={bathrooms}
-                onChange={(e) => setBathrooms(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`floor-${index}-bedrooms`} className="text-sm font-medium">
+                      Bedrooms
+                    </Label>
+                    <Input
+                      id={`floor-${index}-bedrooms`}
+                      type="number"
+                      placeholder="e.g., 3"
+                      value={floor.bedrooms}
+                      onChange={(e) => updateFloorData(index, "bedrooms", e.target.value)}
+                      min="0"
+                      required
+                    />
+                  </div>
 
-            <div className="card-soft space-y-3">
-              <Label htmlFor="kitchens" className="text-sm font-medium">
-                Kitchens
-              </Label>
-              <Input
-                id="kitchens"
-                type="number"
-                placeholder="e.g., 1"
-                value={kitchens}
-                onChange={(e) => setKitchens(e.target.value)}
-                min="1"
-                required
-              />
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`floor-${index}-bathrooms`} className="text-sm font-medium">
+                      Bathrooms
+                    </Label>
+                    <Input
+                      id={`floor-${index}-bathrooms`}
+                      type="number"
+                      placeholder="e.g., 2"
+                      value={floor.bathrooms}
+                      onChange={(e) => updateFloorData(index, "bathrooms", e.target.value)}
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`floor-${index}-kitchens`} className="text-sm font-medium">
+                      Kitchens
+                    </Label>
+                    <Input
+                      id={`floor-${index}-kitchens`}
+                      type="number"
+                      placeholder="e.g., 1"
+                      value={floor.kitchens}
+                      onChange={(e) => updateFloorData(index, "kitchens", e.target.value)}
+                      min="0"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Quality Type */}
