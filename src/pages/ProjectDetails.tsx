@@ -22,7 +22,7 @@ const ProjectDetails = () => {
   const [area, setArea] = useState("");
   const [floors, setFloors] = useState([1]);
   const [floorData, setFloorData] = useState([
-    { bedrooms: "", bathrooms: "", kitchens: "" }
+    { bedrooms: "", bathrooms: "", kitchens: "", halls: "" }
   ]);
   const [quality, setQuality] = useState("standard");
 
@@ -37,7 +37,8 @@ const ProjectDetails = () => {
       const newFloors = Array(newFloorCount - currentFloorCount).fill({
         bedrooms: "",
         bathrooms: "",
-        kitchens: ""
+        kitchens: "",
+        halls: ""
       });
       setFloorData([...floorData, ...newFloors]);
     } else if (newFloorCount < currentFloorCount) {
@@ -62,7 +63,7 @@ const ProjectDetails = () => {
     
     // Validate that all floor data is filled
     const isValid = floorData.every(
-      floor => floor.bedrooms && floor.bathrooms && floor.kitchens
+      floor => floor.bedrooms && floor.bathrooms && floor.kitchens && floor.halls
     );
     
     if (!isValid) {
@@ -73,6 +74,7 @@ const ProjectDetails = () => {
     const totalRooms = floorData.reduce((sum, floor) => sum + parseInt(floor.bedrooms), 0);
     const totalBathrooms = floorData.reduce((sum, floor) => sum + parseInt(floor.bathrooms), 0);
     const totalKitchens = floorData.reduce((sum, floor) => sum + parseInt(floor.kitchens), 0);
+    const totalHalls = floorData.reduce((sum, floor) => sum + parseInt(floor.halls), 0);
 
     const projectData = {
       location,
@@ -82,11 +84,15 @@ const ProjectDetails = () => {
         bedrooms: parseInt(floor.bedrooms),
         bathrooms: parseInt(floor.bathrooms),
         kitchens: parseInt(floor.kitchens),
+        halls: parseInt(floor.halls),
       })),
       // Totals for backward compatibility
       rooms: totalRooms,
       bathrooms: totalBathrooms,
       kitchens: totalKitchens,
+      totalBathrooms: totalBathrooms,
+      totalKitchens: totalKitchens,
+      totalHalls: totalHalls,
       quality,
     };
     localStorage.setItem("currentProject", JSON.stringify(projectData));
@@ -199,7 +205,7 @@ const ProjectDetails = () => {
                   <h3 className="text-lg font-semibold">{getFloorLabel(index)}</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor={`floor-${index}-bedrooms`} className="text-sm font-medium">
                       Bedrooms
@@ -240,6 +246,21 @@ const ProjectDetails = () => {
                       placeholder="e.g., 1"
                       value={floor.kitchens}
                       onChange={(e) => updateFloorData(index, "kitchens", e.target.value)}
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`floor-${index}-halls`} className="text-sm font-medium">
+                      Halls/Living
+                    </Label>
+                    <Input
+                      id={`floor-${index}-halls`}
+                      type="number"
+                      placeholder="e.g., 1"
+                      value={floor.halls}
+                      onChange={(e) => updateFloorData(index, "halls", e.target.value)}
                       min="0"
                       required
                     />
