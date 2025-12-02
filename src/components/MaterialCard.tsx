@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Info, ChevronDown, ChevronUp, Plus, Minus, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { QuantityStepper } from "@/components/QuantityStepper";
+import { SmartTooltip } from "@/components/SmartTooltip";
 
 interface MaterialCardProps {
   title: string;
@@ -33,6 +36,22 @@ export const MaterialCard = ({
   rateUnit,
 }: MaterialCardProps) => {
   const [showEducational, setShowEducational] = useState(false);
+  const [inputMode, setInputMode] = useState<'slider' | 'stepper' | 'input'>('slider');
+  
+  // Smart suggestions based on material type
+  const getSmartSuggestions = () => {
+    const materialType = title.toLowerCase();
+    if (materialType.includes('cement')) {
+      return [Math.floor(quantity * 0.8), quantity, Math.floor(quantity * 1.2)];
+    }
+    if (materialType.includes('steel')) {
+      return [Math.floor(quantity * 0.9), quantity, Math.floor(quantity * 1.1)];
+    }
+    return [Math.floor(quantity * 0.8), quantity, Math.floor(quantity * 1.2)];
+  };
+  
+  const suggestions = getSmartSuggestions();
+  const maxQuantity = Math.max(quantity * 2, 100);
 
   return (
     <Card className="card-soft animate-fade-in">
@@ -72,14 +91,99 @@ export const MaterialCard = ({
           </div>
         )}
 
-        {/* Input Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${title}-quantity`} className="text-sm">
-              Quantity ({unit})
-            </Label>
+        {/* Smart Suggestions */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className="text-sm text-muted-foreground flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            Quick select:
+          </span>
+          {suggestions.map((suggestion, index) => (
+            <Button
+              key={index}
+              variant={quantity === suggestion ? "default" : "outline"}
+              size="sm"
+              onClick={() => onQuantityChange(suggestion)}
+              className="h-7 px-3 text-xs"
+            >
+              {suggestion} {unit}
+            </Button>
+          ))}
+        </div>
+
+        {/* Input Mode Selector */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">Input mode:</span>
+          <div className="flex gap-1">
+            <SmartTooltip content="Use slider for quick adjustments">
+              <Button
+                variant={inputMode === 'slider' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setInputMode('slider')}
+                className="h-8 px-3 text-xs"
+              >
+                🎯 Slider
+              </Button>
+            </SmartTooltip>
+            <SmartTooltip content="Use +/- buttons for precise control">
+              <Button
+                variant={inputMode === 'stepper' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setInputMode('stepper')}
+                className="h-8 px-3 text-xs"
+              >
+                ➕ Stepper
+              </Button>
+            </SmartTooltip>
+            <SmartTooltip content="Type exact numbers manually">
+              <Button
+                variant={inputMode === 'input' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setInputMode('input')}
+                className="h-8 px-3 text-xs"
+              >
+                ⌨️ Manual
+              </Button>
+            </SmartTooltip>
+          </div>
+        </div>
+
+        {/* Quantity Input */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">
+            Quantity: {quantity} {unit}
+          </Label>
+          
+          {inputMode === 'slider' && (
+            <div className="space-y-2">
+              <Slider
+                value={[quantity]}
+                onValueChange={(value) => onQuantityChange(value[0])}
+                max={maxQuantity}
+                min={0}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0</span>
+                <span>{maxQuantity}</span>
+              </div>
+            </div>
+          )}
+          
+          {inputMode === 'stepper' && (
+            <QuantityStepper
+              value={quantity}
+              onChange={onQuantityChange}
+              min={0}
+              max={maxQuantity}
+              step={title.toLowerCase().includes('cement') ? 1 : title.toLowerCase().includes('bricks') ? 0.1 : 1}
+              unit={unit}
+              size="md"
+            />
+          )}
+          
+          {inputMode === 'input' && (
             <Input
-              id={`${title}-quantity`}
               type="number"
               value={quantity}
               onChange={(e) => onQuantityChange(parseFloat(e.target.value) || 0)}
@@ -87,8 +191,11 @@ export const MaterialCard = ({
               step="0.1"
               className="h-10"
             />
-          </div>
+          )}
+        </div>
 
+        {/* Rate and Cost */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor={`${title}-rate`} className="text-sm">
               Rate ({rateUnit})
@@ -106,7 +213,7 @@ export const MaterialCard = ({
 
           <div className="space-y-2">
             <Label className="text-sm">Total Cost</Label>
-            <div className="h-10 px-3 border border-input rounded-md bg-muted flex items-center font-semibold text-primary">
+            <div className="h-10 px-3 border border-input rounded-md bg-gradient-to-r from-primary/5 to-primary/10 flex items-center font-bold text-primary text-lg">
               ₹{cost.toLocaleString('en-IN')}
             </div>
           </div>

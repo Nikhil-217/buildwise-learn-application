@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Send, Home, Lightbulb } from "lucide-react";
+import { MessageCircle, Send, Home, Lightbulb, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -22,40 +22,46 @@ const BuildBot = () => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const suggestedQuestions = [
-    "What's RCC?",
-    "How to reduce costs?",
-    "Material alternatives?",
-    "Timeline estimate?",
+    "How does AI help?",
+    "Cost optimization tips?",
+    "Smart material choices?",
+    "Accuracy guarantee?",
   ];
 
-  const getBotResponse = (question: string): string => {
-    const q = question.toLowerCase();
-    
-    if (q.includes("rcc") || q.includes("reinforced")) {
-      return "RCC stands for Reinforced Cement Concrete. It's concrete strengthened with steel bars (rebars). The steel handles tension while concrete handles compression, making structures strong and durable. Used in beams, columns, and slabs. 🏗️";
+  const getBotResponse = async (question: string): Promise<string> => {
+    try {
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'mistral',
+          prompt: `You are BuildBot, a helpful construction assistant for BuildWise. Answer questions about construction, building materials, cost estimation, and building practices. Be informative, accurate, and use emojis where appropriate. Keep responses concise but helpful.
+
+User question: ${question}
+
+Answer as BuildBot:`,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from Ollama');
+      }
+
+      const data = await response.json();
+      return data.response || "I'm sorry, I couldn't generate a response right now. Please try again.";
+    } catch (error) {
+      console.error('Error calling Ollama:', error);
+      return "I'm experiencing some technical difficulties. Please try again later or ask about construction topics I know well!";
     }
-    if (q.includes("reduce") || q.includes("cost") || q.includes("save")) {
-      return "Here are 3 ways to reduce costs:\n\n1. 🧱 Use fly-ash bricks instead of red bricks (saves 10-15%)\n2. 📦 Buy materials in bulk during off-season (May-July)\n3. 🚚 Source locally to cut transportation costs by 8-12%\n\nWould you like more tips?";
-    }
-    if (q.includes("material") || q.includes("alternative")) {
-      return "Common alternatives:\n\n• Bricks → Fly-ash bricks (eco-friendly, cheaper)\n• River sand → M-sand (manufactured sand, sustainable)\n• Marble → Vitrified tiles (lower maintenance)\n• Wood → WPC (wood-plastic composite, termite-free)\n\nWhich material interests you?";
-    }
-    if (q.includes("timeline") || q.includes("how long") || q.includes("duration")) {
-      return "Construction timeline depends on area:\n\n• 1000 sq.ft: 5-7 months\n• 1500 sq.ft: 7-10 months\n• 2000 sq.ft: 10-12 months\n• 2500+ sq.ft: 12-15 months\n\nThis includes foundation, structure, finishing, and curing. Weather and labor availability affect timelines. ⏱️";
-    }
-    if (q.includes("cement") || q.includes("bags")) {
-      return "Cement calculation:\n• 1 bag = 50kg\n• Standard usage: 0.4 bags per sq.ft\n• For 1500 sq.ft: ~600 bags\n\nPopular brands: UltraTech, ACC, Ambuja. Store in dry place, use within 90 days. 🏗️";
-    }
-    if (q.includes("steel") || q.includes("tmt")) {
-      return "Steel (TMT bars) info:\n• Required: 4-5 kg per sq.ft\n• Grades: Fe415, Fe500, Fe550\n• TMT = Thermo-Mechanically Treated\n• Benefits: Earthquake resistant, high strength, corrosion resistant\n\nAlways buy ISI certified bars. 🔩";
-    }
-    
-    return "I'm learning more every day! 🤖 Could you rephrase that? Or ask about:\n• Materials (cement, steel, bricks)\n• Cost reduction\n• Construction timeline\n• RCC and structural elements\n• Quality comparisons";
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage: Message = {
@@ -65,16 +71,27 @@ const BuildBot = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      const botResponse = await getBotResponse(input);
       const botMessage: Message = {
         id: messages.length + 2,
-        text: getBotResponse(input),
+        text: botResponse,
         sender: "bot",
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 800);
+    } catch (error) {
+      console.error('Error getting bot response:', error);
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: "Sorry, I'm having trouble connecting right now. Please try again!",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
 
     setInput("");
   };
@@ -136,6 +153,20 @@ const BuildBot = () => {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-3 bg-card text-card-foreground card-soft">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="w-4 h-4 text-secondary" />
+                    <span className="font-semibold text-sm">BuildBot</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-sm">Thinking...</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
@@ -170,9 +201,10 @@ const BuildBot = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             className="flex-1 h-12"
+            disabled={isLoading}
           />
-          <Button onClick={handleSend} className="btn-hero h-12 px-6">
-            <Send className="w-5 h-5" />
+          <Button onClick={handleSend} className="btn-hero h-12 px-6" disabled={isLoading}>
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
         </div>
       </div>
