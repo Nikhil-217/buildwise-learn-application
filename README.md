@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # BuildWise - Construction Cost Estimator
 
 BuildWise helps you estimate home construction costs accurately. Every brick, every bag, explained clearly. Built for homebuilders.
@@ -32,3 +33,7 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 - Supabase
+=======
+# buildwise-learn-application
+Built a learning guide platform that delivers construction-related knowledge, safety practices, and workflow guidance to assist workers in improving efficiency and understanding site operations.
+>>>>>>> 0af1ac1ad3a412101490387cf361cc355982ccfd
